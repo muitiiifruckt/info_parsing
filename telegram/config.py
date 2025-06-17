@@ -1,20 +1,17 @@
+from .config_schema import SearchConfig
 
-from dataclasses import dataclass
 
-@dataclass
-class SearchConfig:
-    """ Класс определения параметров поиска"""
-    search_within: bool = False | None
-    search_sections: list[str] | None
-    emitent: list[str]
-    sources: list[str]
-    
-@dataclass
-class News:
-    """Класс определяющий вид, в котором будут хранится статьи"""
-    time: str
-    title: str | None
-    tg_name: str
-    body: str | None
-    
-    
+
+############
+# First config
+tg_conf_1 = SearchConfig()
+tg_conf_1.sources = [
+    "strela_life2", "banksta", "criminallru", "ebitdaebitda", "bbbreaking",
+    "boilerroomchannel", "Jelezobetonniyzames", "proeconomics", "Burovaia", "FatCat18",
+     "belaya_kaska", "mamkinfinansist", "karaulny_accountant", 
+    "vchk_gpu", "blablanomika", "rzd_partner_news", "Vgudok", "rzdfiles",
+    "inflation_shock", "olegderipaska"
+]  
+tg_conf_1.emitent = ['Газпром', 'Сбербанк', 'Лукойл']
+tg_conf_1.search_within = True
+#################

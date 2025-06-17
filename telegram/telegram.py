@@ -40,7 +40,7 @@ with client:
     channel_usernames = [
     "strela_life2", "banksta", "criminallru", "ebitdaebitda", "bbbreaking",
     "boilerroomchannel", "Jelezobetonniyzames", "proeconomics", "Burovaia", "FatCat18",
-    "Зде", "belaya_kaska", "mamkinfinansist", "karaulny_accountant", "ТЭК-ТЭК",
+     "belaya_kaska", "mamkinfinansist", "karaulny_accountant", 
     "vchk_gpu", "blablanomika", "rzd_partner_news", "Vgudok", "rzdfiles",
     "inflation_shock", "olegderipaska"
 ]  
