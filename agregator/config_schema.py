@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 
 @dataclass
@@ -17,8 +16,9 @@ class NewsItem:
     title: str
     link: str
     source: str
-    description: str | None
-    body: str | None
+    description: str | None = None
+    emitent: str | None = None
+    body: str | None = None
     
 @dataclass
 class SectionsUrlRSS:
