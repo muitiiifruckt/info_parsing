@@ -106,30 +106,11 @@ def get_filtered_items(config: SearchConfig) ->list[NewsItem]:
     link_types = config.search_sections
     
     news = get_all_itemns(link_types,timeedelta)
-    print(len(news))
-    filtered_news = filter_items(news,emitents,search_within)
-    print(len(filtered_news))
-    print(filtered_news[0])
-    print()
-    print(filtered_news[1])
-    print()
-    print(filtered_news[2])
-    print()
-    print(filtered_news[3])
-    print()
-    
-if __name__ == '__main__':
-    # feed = feedparser.parse(cm_urls.main)
-    # timedelta = datetime.now() - timedelta(hours=24)
-    # for entry in feed.entries:
-    #     published = datetime(*entry.published_parsed[:6])
-    #     if published >= timedelta:
-    #         print(f"{published:%Y-%m-%d %H:%M}")
-    #         print(entry.title)
-    #         print(entry.link)
-    #         print(source)
-    #         print(entry.description)
-    #         print()
-    
-    get_filtered_items(ag_conf_1)
 
+    filtered_news = filter_items(news,emitents,search_within)
+    return filtered_news
+
+
+if __name__ == '__main__':
+    print(len(get_filtered_items(ag_conf_1)
+    ))
