@@ -14,6 +14,7 @@ COMPANIES = ['Газпром', 'Сбербанк', 'Лукойл']
 class NewsParser:
     def __init__(self):
         self.news_list: List[NewsItem] = []
+        self.seen_links = set()  # множество для уникальных ссылок
         self.company = "Interfacs"
         
     def parse_news(self, html_content: str, company: str, page=None) -> List[NewsItem]:
@@ -55,6 +56,14 @@ class NewsParser:
                 # Проверяем наличие изображения
                 has_image = bool(item.find('img'))
                 
+                # Проверка на уникальность по ссылке
+                if news_link in self.seen_links:
+                    print(self.seen_links)
+                    print(news_link)
+                    print("Повторение статьи")
+                    print()
+                    continue  # уже добавляли такую новость
+
                 # Создаем объект новости
                 news_item = NewsItem(
                 time=news_time,
@@ -66,6 +75,7 @@ class NewsParser:
                 body=record             # полный текст статьи, если парсите
                 )
                 self.news_list.append(news_item)
+                self.seen_links.add(news_link)  # добавляем ссылку в множество
                 
             except Exception as e:
                 print(f"Ошибка при обработке новости: {str(e)}")
@@ -96,7 +106,7 @@ class NewsParser:
             print("-" * 80)
 
 def main():
-    timedelta_dt = datetime.now() - timedelta(hours=config.time_delta_hours)
+    timedelta_dt = 24
     search_within = config.search_within # True поиск идет по поискавику интерфакса
     emitents = config.emitent
     link_types = config.search_sections
