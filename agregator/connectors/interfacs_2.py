@@ -3,23 +3,18 @@ import time
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 from typing import List, Optional
-from datetime import date, timedelta
+from datetime import date, timedelta,datetime
+from agregator.config_schema import NewsItem  # Импортируйте общий NewsItem
+from ..config import ag_conf_1 as config
 
 # Список компаний для поиска
 COMPANIES = ['Газпром', 'Сбербанк', 'Лукойл']
 
-@dataclass
-class NewsItem:
-    """Класс для хранения информации о новости"""
-    time: str
-    title: str
-    link: str
-    company: str
-    has_image: bool = False
 
 class NewsParser:
     def __init__(self):
         self.news_list: List[NewsItem] = []
+        self.company = "Interfacs"
         
     def parse_news(self, html_content: str, company: str, page=None) -> List[NewsItem]:
         """Парсит HTML и извлекает новости"""
@@ -62,13 +57,14 @@ class NewsParser:
                 
                 # Создаем объект новости
                 news_item = NewsItem(
-                    time=news_time,
-                    title=news_title,
-                    link=news_link,
-                    company=company,
-                    has_image=has_image
+                time=news_time,
+                title=news_title,
+                link=news_link,
+                source="interfax.ru",
+                description=None,  # если есть краткое описание, иначе None
+                emitent=self.company,        # если компания — эмитент
+                body=record             # полный текст статьи, если парсите
                 )
-                
                 self.news_list.append(news_item)
                 
             except Exception as e:
@@ -92,15 +88,19 @@ class NewsParser:
         print("-" * 80)
         
         for news in self.news_list:
-            print(f"Компания: {news.company}")
+            print(f"Компания: {news.emitent}")
             print(f"Время: {news.time}")
             print(f"Заголовок: {news.title}")
             print(f"Ссылка: {news.link}")
-            if news.has_image:
-                print("📷 Новость содержит изображение")
+            
             print("-" * 80)
 
 def main():
+    timedelta_dt = datetime.now() - timedelta(hours=config.time_delta_hours)
+    search_within = config.search_within # True поиск идет по поискавику интерфакса
+    emitents = config.emitent
+    link_types = config.search_sections
+    
     with sync_playwright() as p:
         # Запуск браузера в видимом режиме
         browser = p.chromium.launch(headless=False)
@@ -119,8 +119,8 @@ def main():
             parser = NewsParser()
             
             # Для каждой компании выполняем поиск
-            for company in COMPANIES:
-                print(f"\nПоиск новостей о компании: {company}")
+            for company in emitents:
+                print(f"\nПоиск новостей о компании: {emitents}")
                 
                 # Открываем страницу поиска
                 page.goto("https://www.interfax.ru/search/")
@@ -134,7 +134,7 @@ def main():
                 
                 search_input.fill(company)
                 # Установить дату "20.06.2024" в поле с id="from"
-                offset = date.today() - timedelta(days=1)
+                offset = date.today() - timedelta(hours=timedelta_dt)
                 date_str = offset.strftime('%d.%m.%Y')
                 page.fill('input#from', date_str)
                 
