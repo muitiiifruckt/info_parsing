@@ -21,7 +21,7 @@ class NewsParser:
     def __init__(self):
         self.news_list: List[NewsItem] = []
         
-    def parse_news(self, html_content: str, company: str) -> List[NewsItem]:
+    def parse_news(self, html_content: str, company: str, page=None) -> List[NewsItem]:
         """Парсит HTML и извлекает новости"""
         soup = BeautifulSoup(html_content, 'html.parser')
         
@@ -53,6 +53,8 @@ class NewsParser:
                 print(f"Дата: {news_time}")
                 print(f"Заголовок: {news_title}")
                 print(f"Ссылка: {news_link}")
+                record = self.get_article_text(page, news_link) if page and news_link else None
+                print(f"Статья - {record}")
                 print('-' * 40)
                 
                 # Проверяем наличие изображения
@@ -74,6 +76,15 @@ class NewsParser:
                 continue
                 
         return self.news_list
+
+    def get_article_text(self, page, url):
+        page.goto(url)
+        page.wait_for_load_state('networkidle')
+        html = page.content()
+        soup = BeautifulSoup(html, 'html.parser')
+        paragraphs = soup.find_all('p')
+        article_text = '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+        return article_text
     
     def print_news(self):
         """Выводит новости в консоль"""
@@ -135,7 +146,7 @@ def main():
                 html_content = page.content()
                 
                 # Парсим результаты
-                parser.parse_news(html_content, company)
+                parser.parse_news(html_content, company, page=page)
                 
                 # Небольшая задержка между запросами
                 time.sleep(1)
