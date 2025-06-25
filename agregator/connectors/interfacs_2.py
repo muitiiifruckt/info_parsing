@@ -3,6 +3,7 @@ import time
 from bs4 import BeautifulSoup
 from dataclasses import dataclass
 from typing import List, Optional
+from datetime import date, timedelta
 
 # Список компаний для поиска
 COMPANIES = ['Газпром', 'Сбербанк', 'Лукойл']
@@ -25,29 +26,34 @@ class NewsParser:
         soup = BeautifulSoup(html_content, 'html.parser')
         
         # Находим все новости в результатах поиска
-        news_items = soup.find_all('div', class_='sPageResult')
-        
+        news_items = soup.find('div', class_='sPageResult')
+        news_items = news_items.find_all("div",recursive =False)
         for item in news_items:
             try:
-                print(item)
-                print()
-                # Получаем время
+                # Дата
                 time_elem = item.find('time')
-                if not time_elem:
-                    continue
-                    
-                news_time = time_elem.text
-                
-                # Получаем ссылку и заголовок
-                link_elem = item.find('a', class_='sPageResult__link')
-                if not link_elem:
-                    continue
-                    
-                news_link = link_elem.get('href', '')
-                if news_link.startswith('/'):
-                    news_link = f"https://www.interfax.ru{news_link}"
-                
-                news_title = link_elem.text.strip()
+                news_time = time_elem.text.strip() if time_elem else None
+
+                # Для блока с фото ищем внутри .title
+                if 'sPageResult__photo' in item.get('class', []):
+                    title_div = item.find('div', class_='title')
+                    links = title_div.find_all('a') if title_div else []
+                else:
+                    links = item.find_all('a')
+
+                if len(links) > 1:
+                    news_link = links[1].get('href', '')
+                    news_title = links[1].text.strip()
+                    if news_link.startswith('/'):
+                        news_link = f"https://www.interfax.ru{news_link}"
+                else:
+                    news_link = None
+                    news_title = None
+
+                print(f"Дата: {news_time}")
+                print(f"Заголовок: {news_title}")
+                print(f"Ссылка: {news_link}")
+                print('-' * 40)
                 
                 # Проверяем наличие изображения
                 has_image = bool(item.find('img'))
@@ -114,7 +120,12 @@ def main():
                 search_input = page.locator('input[name="phrase"]')
                 # Используем более специфичный селектор для поля ввода в основной форме поиска
                 search_input = page.locator('main input[name="phrase"]')
+                
                 search_input.fill(company)
+                # Установить дату "20.06.2024" в поле с id="from"
+                offset = date.today() - timedelta(days=1)
+                date_str = offset.strftime('%d.%m.%Y')
+                page.fill('input#from', date_str)
                 
                 # Отправляем форму
                 search_form.evaluate('form => form.submit()')

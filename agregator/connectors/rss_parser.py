@@ -3,9 +3,8 @@ import feedparser
 from datetime import datetime, timedelta
 from ..config_schema import NewsItem
 
-def parse_rss(feed_url: str, source: str, cutoff_hours: int = 1) -> list[NewsItem]:
+def parse_rss(feed_url: str, source: str, cutoff_hours: int = 20) -> list[NewsItem]:
     feed = feedparser.parse(feed_url)
- 
     cutoff = datetime.now() - timedelta(hours=cutoff_hours)
     news = []
     for entry in feed.entries:
@@ -15,8 +14,9 @@ def parse_rss(feed_url: str, source: str, cutoff_hours: int = 1) -> list[NewsIte
         except Exception:
             continue
         try:
+ 
             if published >= cutoff:
-            
+
                 news.append(NewsItem(
                     time=published.strftime('%Y-%m-%d %H:%M'),
                     title=entry.get('title', 'Без заголовка'),
