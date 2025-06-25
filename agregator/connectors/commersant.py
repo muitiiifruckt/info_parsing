@@ -112,5 +112,6 @@ def get_filtered_items(config: SearchConfig) ->list[NewsItem]:
 
 
 if __name__ == '__main__':
-    print(len(get_filtered_items(ag_conf_1)
-    ))
+    news = get_filtered_items(ag_conf_1)
+    print(news)
+    print(len(news))

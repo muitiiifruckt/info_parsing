@@ -20,18 +20,18 @@ def save_seen(seen):
 
 def run_all_parsers(hours: int = 24, seen=None):
     all_news = []
+    seen = set()
     all_news.extend(get_ria_news(hours))
     all_news.extend(get_russia_magazine_news(hours))
     all_news.extend(get_rbk_news(hours))
     all_news.extend(get_tass_news(hours))
     # Фильтруем только новые
-    print()
-    print(seen)
-    print("Seen")
-    print()
-    if seen is not None:
-        new_news = [item for item in all_news if item.link not in seen]
-        return new_news
+    unique_news = []
+    seen_links = set()
+    for item in all_news:  # news_list — ваш исходный список
+        if item.link not in seen_links:
+            unique_news.append(item)
+            seen_links.add(item.link)
     return all_news
 
 if __name__ == "__main__":
