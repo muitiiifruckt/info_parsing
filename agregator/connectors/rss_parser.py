@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from ..config_schema import NewsItem
 import requests
 from bs4 import BeautifulSoup
+import re
 
 def fetch_article_body(url: str, source:str) -> str | None:
     try:
@@ -11,17 +12,48 @@ def fetch_article_body(url: str, source:str) -> str | None:
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         # Универсально: собрать все <p> (можно доработать под конкретные сайты)
-        if source=="РИА Новости" or source=="Российская газета":
-            paragraphs = soup.find_all('div', "class=")
+        if source=="РИА Новости":
+            paragraphs = soup.find_all('div', class_='article__text')
             text = '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
         else:
-            pass
             paragraphs = soup.find_all('p')
             text = '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+        if text:
+            text = clean_article_text(text)
         return text if text else None
     except Exception as e:
         print(f"Ошибка при получении статьи {url}: {e}")
         return None
+
+def clean_article_text(text: str) -> str:
+    # Удаляем шапки в начале текста:
+    # "МОСКВА, 30 июн - РИА Новости."
+    text = re.sub(
+        r'^[А-ЯЁA-Z\-]+,\s*\d{1,2}\s+[а-яa-z]+\s*-\s*РИА Новости\.\s*',
+        '',
+        text,
+        flags=re.MULTILINE
+    )
+    # "МОСКВА, 30 июня. /ТАСС/."
+    text = re.sub(
+        r'^[А-ЯЁA-Z\-]+,\s*\d{1,2}\s+[а-яa-z]+\.\s*/ТАСС/\.?\s*',
+        '',
+        text,
+        flags=re.MULTILINE
+    )
+    # Обрезаем по фразе и всем её "хвостам"
+    cut_patterns = [
+        r"РБК в Telegram.*",
+        r"Интернет-портал «Российской газеты».*",
+        # другие паттерны для "хвостов"
+    ]
+    for pattern in cut_patterns:
+        match = re.search(pattern, text, flags=re.DOTALL | re.MULTILINE)
+        if match:
+            text = text[:match.start()]
+    # Удаляем лишние пустые строки
+    text = re.sub(r'\n{2,}', '\n', text)
+    return text.strip()
 
 def parse_rss(feed_url: str, source: str, emitents: list, search_within: bool = True) -> list[NewsItem]:
     feed = feedparser.parse(feed_url)
@@ -35,8 +67,10 @@ def parse_rss(feed_url: str, source: str, emitents: list, search_within: bool = 
         try:
             link = entry.get('link', '')
             print(link)
-            body = fetch_article_body(link) if link else None
+            body = fetch_article_body(link,source=source) if link else None
+            print(body)
             title = entry.get('title', 'Без заголовка')
+            print(title)
             add_news = False
 
             if search_within:
@@ -66,3 +100,5 @@ def parse_rss(feed_url: str, source: str, emitents: list, search_within: bool = 
         except Exception:
             continue
     return news
+if __name__ == '__main__':
+    print(fetch_article_body("https://tass.ru/mezhdunarodnaya-panorama/24390549","Tass"))
