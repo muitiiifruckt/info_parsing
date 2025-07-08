@@ -6,7 +6,7 @@ import feedparser
 from datetime import datetime, timedelta
 from ..config_schema import SectionsUrlRSS, NewsItem, SearchConfig
 from ..config import ag_conf_1
-
+from .rss_parser import save_news_to_txt
 
 ### определение ссылок для разных разделов
 cm_urls = SectionsUrlRSS(
@@ -63,6 +63,7 @@ def set_article_content(item: NewsItem) -> NewsItem:
         text = ""
         for part in article_text:
             text +=part.get_text(strip=True)
+        text = text.replace('\xa0', ' ')
         if text:
             item.body = text
         return item
@@ -113,5 +114,7 @@ def get_filtered_items(config: SearchConfig) ->list[NewsItem]:
 
 if __name__ == '__main__':
     news = get_filtered_items(ag_conf_1)
+    save_news_to_txt(news)
+    
     print(news)
     print(len(news))

@@ -2,7 +2,7 @@
 from .rss_parser import parse_rss
 from ..config import ag_conf_1 as config
 
-def get_tass_news(emitents: list, search_within: bool):
+def get_tass_news(emitents: list, search_within: bool= True):
     return parse_rss('https://tass.ru/rss/v2.xml', 'ТАСС', emitents, search_within)
 
 if __name__ == '__main__':

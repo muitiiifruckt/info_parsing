@@ -2,7 +2,7 @@
 from .rss_parser import parse_rss
 from ..config import ag_conf_1 as config
 
-def get_rbk_news(emitents:list,search_within:bool):
+def get_rbk_news(emitents:list,search_within:bool= True):
     return parse_rss('https://rssexport.rbc.ru/rbcnews/news/30/full.rss', 'РБК', emitents,search_within)
 
 

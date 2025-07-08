@@ -6,9 +6,7 @@ from typing import List, Optional
 from datetime import date, timedelta,datetime
 from agregator.config_schema import NewsItem  # Импортируйте общий NewsItem
 from ..config import ag_conf_1 as config
-
-# Список компаний для поиска
-COMPANIES = ['Газпром', 'Сбербанк', 'Лукойл']
+from .rss_parser import save_news_to_txt
 
 
 class NewsParser:
@@ -19,68 +17,70 @@ class NewsParser:
         
     def parse_news(self, html_content: str, company: str, page=None) -> List[NewsItem]:
         """Парсит HTML и извлекает новости"""
-        soup = BeautifulSoup(html_content, 'html.parser')
-        
-        # Находим все новости в результатах поиска
-        news_items = soup.find('div', class_='sPageResult')
-        news_items = news_items.find_all("div",recursive =False)
-        for item in news_items:
-            try:
-                # Дата
-                time_elem = item.find('time')
-                news_time = time_elem.text.strip() if time_elem else None
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Находим все новости в результатах поиска
+            news_items = soup.find('div', class_='sPageResult')
+            news_items = news_items.find_all("div",recursive =False)
+            for item in news_items:
+                try:
+                    # Дата
+                    time_elem = item.find('time')
+                    news_time = time_elem.text.strip() if time_elem else None
 
-                # Для блока с фото ищем внутри .title
-                if 'sPageResult__photo' in item.get('class', []):
-                    title_div = item.find('div', class_='title')
-                    links = title_div.find_all('a') if title_div else []
-                else:
-                    links = item.find_all('a')
+                    # Для блока с фото ищем внутри .title
+                    if 'sPageResult__photo' in item.get('class', []):
+                        title_div = item.find('div', class_='title')
+                        links = title_div.find_all('a') if title_div else []
+                    else:
+                        links = item.find_all('a')
 
-                if len(links) > 1:
-                    news_link = links[1].get('href', '')
-                    news_title = links[1].text.strip()
-                    if news_link.startswith('/'):
-                        news_link = f"https://www.interfax.ru{news_link}"
-                else:
-                    news_link = None
-                    news_title = None
+                    if len(links) > 1:
+                        news_link = links[1].get('href', '')
+                        news_title = links[1].text.strip()
+                        if news_link.startswith('/'):
+                            news_link = f"https://www.interfax.ru{news_link}"
+                    else:
+                        news_link = None
+                        news_title = None
 
-                print(f"Дата: {news_time}")
-                print(f"Заголовок: {news_title}")
-                print(f"Ссылка: {news_link}")
-                record = self.get_article_text(page, news_link) if page and news_link else None
-                print(f"Статья - {record}")
-                print('-' * 40)
-                
-                # Проверяем наличие изображения
-                has_image = bool(item.find('img'))
-                
-                # Проверка на уникальность по ссылке
-                if news_link in self.seen_links:
-                    print(self.seen_links)
-                    print(news_link)
-                    print("Повторение статьи")
-                    print()
-                    continue  # уже добавляли такую новость
+                    print(f"Дата: {news_time}")
+                    print(f"Заголовок: {news_title}")
+                    print(f"Ссылка: {news_link}")
+                    record = self.get_article_text(page, news_link) if page and news_link else None
+                    print(f"Статья - {record}")
+                    print('-' * 40)
+                    
+                    # Проверяем наличие изображения
+                    has_image = bool(item.find('img'))
+                    
+                    # Проверка на уникальность по ссылке
+                    if news_link in self.seen_links:
+                        print(self.seen_links)
+                        print(news_link)
+                        print("Повторение статьи")
+                        print()
+                        continue  # уже добавляли такую новость
 
-                # Создаем объект новости
-                news_item = NewsItem(
-                time=news_time,
-                title=news_title,
-                link=news_link,
-                source="interfax.ru",
-                description=None,  # если есть краткое описание, иначе None
-                emitent=self.company,        # если компания — эмитент
-                body=record             # полный текст статьи, если парсите
-                )
-                self.news_list.append(news_item)
-                self.seen_links.add(news_link)  # добавляем ссылку в множество
-                
-            except Exception as e:
-                print(f"Ошибка при обработке новости: {str(e)}")
-                continue
-                
+                    # Создаем объект новости
+                    news_item = NewsItem(
+                    time=news_time,
+                    title=news_title,
+                    link=news_link,
+                    source="interfax.ru",
+                    description=None,  # если есть краткое описание, иначе None
+                    emitent=self.company,        # если компания — эмитент
+                    body=record             # полный текст статьи, если парсите
+                    )
+                    self.news_list.append(news_item)
+                    self.seen_links.add(news_link)  # добавляем ссылку в множество
+                    
+                except Exception as e:
+                    print(f"Ошибка при обработке новости: {str(e)}")
+                    continue
+        except:
+            pass
         return self.news_list
 
     def get_article_text(self, page, url):
@@ -146,6 +146,7 @@ def main():
                 # Установить дату "20.06.2024" в поле с id="from"
                 offset = date.today() - timedelta(hours=timedelta_dt)
                 date_str = offset.strftime('%d.%m.%Y')
+                date_str = "28.06.2025"
                 page.fill('input#from', date_str)
                 
                 # Отправляем форму
@@ -163,6 +164,7 @@ def main():
             
             # Выводим все найденные новости
             parser.print_news()
+            return parser.news_list
             
             # Ждем, пока пользователь закроет браузер
             input("\nНажмите Enter для закрытия браузера...")
@@ -171,4 +173,5 @@ def main():
             browser.close()
 
 if __name__ == '__main__':
-    main()
+    news = main()
+    save_news_to_txt(news)

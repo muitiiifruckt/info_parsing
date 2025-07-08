@@ -2,7 +2,7 @@
 from .rss_parser import parse_rss
 from ..config import ag_conf_1 as config
 
-def get_russia_magazine_news(emitents: list, search_within: bool):
+def get_russia_magazine_news(emitents: list, search_within: bool= True):
     return parse_rss('https://rg.ru/xml/index.xml', 'Российская газета', emitents, search_within)
 
 if __name__ == '__main__':

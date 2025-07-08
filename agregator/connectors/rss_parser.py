@@ -6,6 +6,18 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
+
+def save_news_to_txt(news_list, txt_filename="all_news.txt",):
+    with open(txt_filename, "a", encoding="utf-8") as f:
+        for item in news_list:
+            f.write(f"Название: {item.title}\n")
+            f.write(f"Источник: {item.source}\n")
+            f.write(f"Ссылка: {item.link}\n")
+            f.write("Статья:\n")
+            if item.body:
+                f.write(item.body.strip() + "\n")
+            f.write("\n---\n\n")  # Добавляем ссылку в список сохранённых
+
 def fetch_article_body(url: str, source:str) -> str | None:
     try:
         response = requests.get(url, timeout=10)
@@ -66,13 +78,9 @@ def parse_rss(feed_url: str, source: str, emitents: list, search_within: bool = 
             continue
         try:
             link = entry.get('link', '')
-            print(link)
             body = fetch_article_body(link,source=source) if link else None
-            print(body)
             title = entry.get('title', 'Без заголовка')
-            print(title)
             add_news = False
-
             if search_within:
                 if body:
                     for emitent in emitents:

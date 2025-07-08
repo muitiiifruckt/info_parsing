@@ -1,9 +1,14 @@
-import time
+import os
+from datetime import datetime
+from apscheduler.schedulers.blocking import BlockingScheduler
 from .connectors.ria import get_ria_news
 from .connectors.russia_magazine import get_russia_magazine_news
 from .connectors.rbk import get_rbk_news
 from .connectors.tasss import get_tass_news
-import os
+from .connectors.commersant import get_filtered_items as get_commersant_news
+from .connectors.Vedomosti import get_filtered_items as get_vedomosti_news
+from .connectors.interfacs_2 import main as interfacs_main
+from .config import ag_conf_1 as config
 
 SEEN_FILE = "seen_news.txt"
 
@@ -18,31 +23,120 @@ def save_seen(seen):
         for link in seen:
             f.write(link + "\n")
 
-def run_all_parsers(hours: int = 24, seen=None):
-    all_news = []
-    seen = set()
-    all_news.extend(get_ria_news(hours))
-    all_news.extend(get_russia_magazine_news(hours))
-    all_news.extend(get_rbk_news(hours))
-    all_news.extend(get_tass_news(hours))
-    # Фильтруем только новые
-    unique_news = []
-    seen_links = set()
-    for item in all_news:  # news_list — ваш исходный список
-        if item.link not in seen_links:
-            unique_news.append(item)
-            seen_links.add(item.link)
-    return all_news
+def load_saved_links(filename="saved_links.txt"):
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            return set(line.strip() for line in f if line.strip())
+    except FileNotFoundError:
+        return set()
+
+def save_link(link, filename="saved_links.txt"):
+    with open(filename, "a", encoding="utf-8") as f:
+        f.write(link + "\n")
+
+def save_news_to_txt(news_list, txt_filename="all_news.txt", links_filename="saved_links.txt"):
+    saved_links = load_saved_links(links_filename)
+    with open(txt_filename, "a", encoding="utf-8") as f:
+        for item in news_list:
+            if item.link in saved_links:
+                continue  # Пропускаем уже сохранённые
+            f.write(f"Название: {item.title}\n")
+            f.write(f"Источник: {item.source}\n")
+            f.write(f"Ссылка: {item.link}\n")
+            f.write("Статья:\n")
+            if item.body:
+                f.write(item.body.strip() + "\n")
+            f.write("\n---\n\n")
+            save_link(item.link, links_filename)  # Добавляем ссылку в список сохранённых
+
+def fetch_rss_news():
+    emitents = config.emitent
+    search_within = config.search_within
+    news = []
+    # РИА
+    try:
+        ria_news = get_ria_news(emitents, search_within)
+        news += ria_news
+        print(f"[РИА] Получено {len(ria_news)} новостей:")
+        for item in ria_news:
+            print(f"  - {item.link}")
+    except Exception as e:
+        print("NO RIA", e)
+    # Российская газета
+    try:
+        rg_news = get_russia_magazine_news(emitents, search_within)
+        news += rg_news
+        print(f"[Российская газета] Получено {len(rg_news)} новостей:")
+        for item in rg_news:
+            print(f"  - {item.link}")
+    except Exception as e:
+        print("NO RG", e)
+    # РБК
+    try:
+        rbk_news = get_rbk_news(emitents, search_within)
+        news += rbk_news
+        print(f"[РБК] Получено {len(rbk_news)} новостей:")
+        for item in rbk_news:
+            print(f"  - {item.link}")
+    except Exception as e:
+        print("NO RBK", e)
+    # ТАСС
+    try:
+        tass_news = get_tass_news(emitents, search_within)
+        news += tass_news
+        print(f"[ТАСС] Получено {len(tass_news)} новостей:")
+        for item in tass_news:
+            print(f"  - {item.link}")
+    except Exception as e:
+        print("NO TASS", e)
+    print(f"[{datetime.now()}] Всего получено {len(news)} новостей (RSS)")
+    save_news_to_txt(news)
+
+def fetch_daily_news():
+    emitents = config.emitent
+    search_within = config.search_within
+    news = []
+    # Коммерсант
+    try:
+        commersant_news = get_commersant_news(config)
+        news += commersant_news
+        print(f"[Коммерсант] Получено {len(commersant_news)} новостей:")
+        for item in commersant_news:
+            print(f"  - {item.link}")
+    except Exception as e:
+        print("NO Kommersant", e)
+    # Ведомости
+    try:
+        vedomosti_news = get_vedomosti_news(config)
+        news += vedomosti_news
+        print(f"[Ведомости] Получено {len(vedomosti_news)} новостей:")
+        for item in vedomosti_news:
+            print(f"  - {item.link}")
+    except Exception as e:
+        print("NO Vedomosti", e)
+    # Интерфакс
+    try:
+        interfacs_news = interfacs_main()
+        news += interfacs_news
+        print(f"[Интерфакс] Получено {len(interfacs_news)} новостей:")
+        for item in interfacs_news:
+            print(f"  - {item.link}")
+    except Exception as e:
+        print("NO Interfacs", e)
+    print(f"[{datetime.now()}] Всего получено {len(news)} новостей (daily)")
+    save_news_to_txt(news)
+    # ОЧИСТКА ФАЙЛА ПОСЛЕ СОХРАНЕНИЯ
+    with open("all_news.txt", "w", encoding="utf-8") as f:
+        pass  # Просто очищаем файл
 
 if __name__ == "__main__":
-    period_minutes = 10  # Период проверки в минутах
-    seen = load_seen()
-    while True:
-        news = run_all_parsers(hours=24, seen=seen)
-        for item in news:
-            print(item)
-            seen.add(item.link)
-        print(len(news))
-        save_seen(seen)
-        print(f"Проверка завершена, ждем {period_minutes} минут...\n")
-        time.sleep(period_minutes * 60)
+    scheduler = BlockingScheduler(timezone="Europe/Moscow")
+    # Каждые 15 минут
+    scheduler.add_job(fetch_rss_news, 'interval', minutes=3, id='rss_news')
+    # Каждый день в 23:59
+    scheduler.add_job(fetch_daily_news, 'cron', hour=23, minute=59, id='daily_news')
+    print("Сбор новостей запущен. Для остановки нажмите Ctrl+C.")
+    try:
+        scheduler.start()
+    except (KeyboardInterrupt, SystemExit):
+        print("Остановка парсера.")
