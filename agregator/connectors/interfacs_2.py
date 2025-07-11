@@ -146,7 +146,7 @@ def main():
                 # Установить дату "20.06.2024" в поле с id="from"
                 offset = date.today() - timedelta(hours=timedelta_dt)
                 date_str = offset.strftime('%d.%m.%Y')
-                date_str = "28.06.2025"
+                #date_str = "28.06.2025"
                 page.fill('input#from', date_str)
                 
                 # Отправляем форму
