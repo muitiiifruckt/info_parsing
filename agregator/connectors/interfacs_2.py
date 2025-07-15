@@ -89,7 +89,7 @@ class NewsParser:
         html = page.content()
         soup = BeautifulSoup(html, 'html.parser')
         paragraphs = soup.find_all('p')
-        article_text = '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+        article_text = '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
         return article_text
     
     def print_news(self):

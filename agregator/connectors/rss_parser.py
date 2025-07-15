@@ -24,12 +24,20 @@ def fetch_article_body(url: str, source:str) -> str | None:
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         # Универсально: собрать все <p> (можно доработать под конкретные сайты)
-        if source=="РИА Новости":
+        if source== "РИА Новости":
             paragraphs = soup.find_all('div', class_='article__text')
-            text = '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+            text = '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
+        elif source == "Российская газета":
+            text = soup.find('div', class_="PageArticleContent_lead__l9TkG commonArticle_zoom__SDMjc").get_text() + " "
+            paragraphs = soup.find_all('p')
+            text += '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
+        elif source == "ТАСС":
+            text = soup.find('div', class_="NewsHeader_lead__PbGDx").get_text() + ". "
+            paragraphs = soup.find_all('p')
+            text += '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
         else:
             paragraphs = soup.find_all('p')
-            text = '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+            text = '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
         if text:
             text = clean_article_text(text)
         return text if text else None
@@ -57,7 +65,7 @@ def clean_article_text(text: str) -> str:
     cut_patterns = [
         r"РБК в Telegram.*",
         r"Интернет-портал «Российской газеты».*",
-        # другие паттерны для "хвостов"
+        r"Любое использование материалов допускается только при соблюдении*",
     ]
     for pattern in cut_patterns:
         match = re.search(pattern, text, flags=re.DOTALL | re.MULTILINE)
@@ -109,4 +117,4 @@ def parse_rss(feed_url: str, source: str, emitents: list, search_within: bool = 
             continue
     return news
 if __name__ == '__main__':
-    print(fetch_article_body("https://tass.ru/mezhdunarodnaya-panorama/24390549","Tass"))
+    print(fetch_article_body("https://tass.ru/ekonomika/24461943","ТАСС"))

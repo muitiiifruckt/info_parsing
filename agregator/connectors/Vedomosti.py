@@ -62,7 +62,8 @@ def set_article_content(item: NewsItem) -> NewsItem:
         ### поиск текста по тегам и классу
         text = ""
         for part in article_text:
-            text +=part.get_text(strip=True)
+            text += part.get_text()
+        text = text.replace('\xa0', ' ')
         if text:
             item.body = text
         return item

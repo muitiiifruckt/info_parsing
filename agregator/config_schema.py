@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-
+from typing import List, Optional
 @dataclass
 class SearchConfig:
     """ Класс определения параметров поиска"""
     search_within: bool
     emitent: list[str]
     sources: list[str]
-    search_sections: list[str] | None
+    search_sections: list[str]
     time_delta_hours: int
     
 @dataclass
