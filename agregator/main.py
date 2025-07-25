@@ -7,7 +7,7 @@ from .connectors.rbk import get_rbk_news
 from .connectors.tasss import get_tass_news
 from .connectors.commersant import get_filtered_items as get_commersant_news
 from .connectors.Vedomosti import get_filtered_items as get_vedomosti_news
-from .connectors.interfacs_2 import main as interfacs_main
+from .connectors.interfacs_e import main as interfacs_main
 from .config import ag_conf_1 as config
 
 SEEN_FILE = "seen_news.txt"

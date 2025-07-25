@@ -20,6 +20,17 @@ class NewsItem:
     emitent: str | None = None
     body: str | None = None
     
+    
+    ### для того чтобы можно было закидывать статьи в set
+    def __eq__(self, other):
+        if not isinstance(other, NewsItem):
+            return False
+        return self.link == other.link
+    
+    def __hash__(self):
+        return hash(self.link) 
+     ### для того чтобы можно было закидывать статьи в set
+    
 @dataclass
 class SectionsUrlRSS:
     main: str
@@ -27,6 +38,26 @@ class SectionsUrlRSS:
     business: str | None
     financess: str | None
     # другие подразделы, на данный момент нет нужды
+    
+    
+@dataclass
+class src_prms:
+    """ Определение параметров поиска по источнику (разметка и остальное)"""
+    search_page = str 
+    search_form = str
+    search_input = str
+    search_evalute = str
+    res_news_cls = str
+    res_news_item_cl = str 
+    res_item_date  = str
+    links_tag = str
+    source_link = str
+    # параметры для извлечения текста статьи
+    
+    
+    
+    
+    
     
 
     
