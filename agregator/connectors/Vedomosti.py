@@ -9,7 +9,7 @@ from .rss_parser import save_news_to_txt
 
 # определение ссылок для разных разделов
 vedomosti_urls = SectionsUrlRSS(
-    main="http://www.vedomosti.ru/newsline/out/rss.xml",
+    main="https://www.vedomosti.ru/newsline/out/rss.xml",
     business="http://www.vedomosti.ru/rss/rubric/business.xml",
     economics="http://www.vedomosti.ru/rss/rubric/economics.xml",
     financess="http://www.vedomosti.ru/rss/rubric/finance.xml"

@@ -32,8 +32,8 @@ def fetch_article_body(url: str, source:str) -> str | None:
             paragraphs = soup.find_all('p')
             text += '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
         elif source == "ТАСС":
-            text = soup.find('div', class_="NewsHeader_lead__PbGDx").get_text() + ". "
-            paragraphs = soup.find_all('p')
+            text = soup.find('div', class_="NewsHeader_lead__XcM1k NewsHeader_lead--with_media___zjHd").get_text() + ". "
+            paragraphs = soup.find_all('article')
             text += '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
         else:
             paragraphs = soup.find_all('p')
@@ -86,7 +86,9 @@ def parse_rss(feed_url: str, source: str, emitents: list, search_within: bool = 
             continue
         try:
             link = entry.get('link', '')
+            print(link)
             body = fetch_article_body(link,source=source) if link else None
+            print(f"body len - {len(body)}")
             title = entry.get('title', 'Без заголовка')
             add_news = False
             if search_within:
