@@ -7,13 +7,46 @@ from datetime import date, timedelta,datetime
 from agregator.config_schema import NewsItem, src_prms  # Импортируйте общий NewsItem
 from ..config import ag_conf_1 as config
 from .rss_parser import save_news_to_txt
-
+import logging
 
 
 class NewsParser:
     def __init__(self, params : src_prms):
         self.news_set: set[NewsItem] = set()
         self.params = params
+        
+    def get_soup(self, html_content) -> str:
+        try:
+            soup = BeautifulSoup(html_content, 'html.parser')
+        except:
+            logging.error(f"Не получись получить soup -")
+        return soup
+    
+    def get_news_items(self,soup:str) -> List[str]:
+        try:
+            news_items = soup.find('div', class_= self.params.res_news_cls)
+            news_items = news_items.find_all("div",recursive =False)
+        except:
+            logging.error(f"Ошибка при попытке извлечь список статей")
+            
+        return news_items
+        
+    def get_item_time(self, item:str) ->str | None: 
+        try:
+            time_elem = item.find('time')
+            news_time = time_elem.text.strip() if time_elem else None
+        except:
+            logging.error(f"Ошибка при попытке извлечь список статей")
+            
+        return news_time
+    def get_item_title(self, item:str) -> str:
+        pass
+    def get_item_link(self, item:str) -> str:
+        pass
+    def get_item_body(self, item:str) -> str:
+        pass
+    def get_item_description(self, item:str) -> str:
+        pass
         
     def parse_news(self, html_content: str, company: str, page=None) -> set[NewsItem]:
         """Парсит HTML и извлекает новости"""
