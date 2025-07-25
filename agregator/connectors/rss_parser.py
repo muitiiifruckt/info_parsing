@@ -86,9 +86,7 @@ def parse_rss(feed_url: str, source: str, emitents: list, search_within: bool = 
             continue
         try:
             link = entry.get('link', '')
-            print(link)
             body = fetch_article_body(link,source=source) if link else None
-            print(f"body len - {len(body)}")
             title = entry.get('title', 'Без заголовка')
             add_news = False
             if search_within:
