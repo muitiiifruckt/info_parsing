@@ -5,11 +5,11 @@ from .connectors.ria import get_ria_news
 from .connectors.russia_magazine import get_russia_magazine_news
 from .connectors.rbk import get_rbk_news
 from .connectors.tasss import get_tass_news
-from .connectors.commersant import get_filtered_items as get_commersant_news
+from .connectors.commersant_e import CommersantParser
 from .connectors.Vedomosti import get_filtered_items as get_vedomosti_news
 from .connectors.interfacs_e import main as interfacs_main
 from .config import ag_conf_1 as config
-
+from .config import commersant_params,interfax_params
 SEEN_FILE = "seen_news.txt"
 
 def load_seen():
@@ -98,7 +98,7 @@ def fetch_daily_news():
     news = []
     # Коммерсант
     try:
-        commersant_news = get_commersant_news(config)
+        commersant_news = CommersantParser(commersant_params)
         news += commersant_news
         print(f"[Коммерсант] Получено {len(commersant_news)} новостей:")
         for item in commersant_news:

@@ -30,6 +30,8 @@ class NewsItem:
     def __hash__(self):
         return hash(self.link) 
      ### для того чтобы можно было закидывать статьи в set
+    def __str__(self) -> str:
+        return self.link + self.source
     
 @dataclass
 class SectionsUrlRSS:
@@ -42,20 +44,19 @@ class SectionsUrlRSS:
     
 @dataclass
 class src_prms:
-    """ Определение параметров поиска по источнику (разметка и остальное)"""
-    search_page = str 
-    search_form = str
-    search_input = str
-    search_evalute = str
-    res_news_cls = str
-    res_news_item_cl = str 
-    res_item_date  = str
-    links_tag = str
-    source_link = str
-    # параметры для извлечения текста статьи
-    
-    
-    
+    search_page: str
+    search_form: str
+    search_input: str
+    search_evalute: str
+    res_news_cls: str
+    res_news_item_cl: str
+    item_date_selector: str
+    item_title_selector: str
+    item_link_selector: str
+    item_description_selector: Optional[str] = None
+    source_link: str = ""
+    article_body_selector: str = "p"
+    source_name: str = ""
     
     
     

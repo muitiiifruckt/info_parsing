@@ -11,198 +11,135 @@ import logging
 
 
 class NewsParser:
-    def __init__(self, params : src_prms):
-        self.news_set: set[NewsItem] = set()
+    def __init__(self, params: src_prms):
         self.params = params
+        self.news_set: set[NewsItem] = set()
+
+    def get_soup(self, html_content: str) -> BeautifulSoup:
+        return BeautifulSoup(html_content, 'html.parser')
+
+    def get_news_items(self, soup: BeautifulSoup) -> List[BeautifulSoup]:
+        try:
+            container = soup.find('div', class_=self.params.res_news_cls)
+            print(container)
+            
+            return container.find_all('div', recursive=False) if container else []
+        except Exception as e:
+            logging.error(f"Ошибка при извлечении списка новостей: {e}")
+            return []
+
+    def parse_item(self, item: BeautifulSoup, company: str, page=None) -> Optional[NewsItem]:
+        try:
+            time_tag = item.find("time")
+            news_time = time_tag.text.strip() if time_tag else None
+
+            all_links = item.find_all("a")
+            news_title = all_links[-1].text.strip() if all_links else None
+            news_link = all_links[-1]["href"] if all_links and all_links[-1].has_attr("href") else None
+
+            if not news_link or not news_title:
+                return None
+
+            if news_link.startswith('/'):
+                news_link = self.params.source_link + news_link
+
+            article_text = self.get_article_text(page, news_link) if page else None
+
+            return NewsItem(
+                time=news_time,
+                title=news_title,
+                link=news_link,
+                source=self.params.source_name,
+                description=None,
+                emitent=company,
+                body=article_text
+            )
+        except Exception as e:
+            logging.error(f"Ошибка при разборе статьи: {e}")
+            return None
+
+    def get_article_text(self, page, url: str) -> str:
+        try:
+            page.goto(url)
+            page.wait_for_load_state('networkidle')
+            html = page.content()
+            soup = self.get_soup(html)
+            paragraphs = soup.select(self.params.article_body_selector)
+            return '\n'.join(p.get_text(strip=True) for p in paragraphs if p.get_text(strip=True))
+        except Exception as e:
+            logging.warning(f"Не удалось получить текст статьи {url}: {e}")
+            return ""
+
+    def parse_news(self, html_content: str, company: str, page=None) -> List[NewsItem]:
+        soup = self.get_soup(html_content)
+        print("soup", len(soup))
+        # print(soup)
+        news_items = self.get_news_items(soup)
         
-    def get_soup(self, html_content) -> str:
-        try:
-            soup = BeautifulSoup(html_content, 'html.parser')
-        except:
-            logging.error(f"Не получись получить soup -")
-        return soup
-    
-    def get_news_items(self,soup:str) -> List[str]:
-        try:
-            news_items = soup.find('div', class_= self.params.res_news_cls)
-            news_items = news_items.find_all("div",recursive =False)
-        except:
-            logging.error(f"Ошибка при попытке извлечь список статей")
-            
-        return news_items
-        
-    def get_item_time(self, item:str) ->str | None: 
-        try:
-            time_elem = item.find('time')
-            news_time = time_elem.text.strip() if time_elem else None
-        except:
-            logging.error(f"Ошибка при попытке извлечь список статей")
-            
-        return news_time
-    def get_item_title(self, item:str) -> str:
-        pass
-    def get_item_link(self, item:str) -> str:
-        pass
-    def get_item_body(self, item:str) -> str:
-        pass
-    def get_item_description(self, item:str) -> str:
-        pass
-        
-    def parse_news(self, html_content: str, company: str, page=None) -> set[NewsItem]:
-        """Парсит HTML и извлекает новости"""
-        try:
-            soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Находим все новости в результатах поиска
-            news_items = soup.find('div', class_= self.params.res_news_cls)
-            news_items = news_items.find_all("div",recursive =False)
-            
-            
-            for item in news_items:
-                try:
-                    # Дата
-                    time_elem = item.find('time')
-                    news_time = time_elem.text.strip() if time_elem else None
+        for item in news_items:
+            news = self.parse_item(item, company, page)
+            if news:
+                self.news_set.add(news)
+        return self.news_set
 
-                    # Для блока с фото ищем внутри .title
-                    if 'sPageResult__photo' in item.get('class', []):
-                        title_div = item.find('div', class_='title')
-                        links = title_div.find_all('a') if title_div else []
-                    else:
-                        links = item.find_all('a')
-
-                    if len(links) > 1:
-                        news_link = links[1].get('href', '')
-                        news_title = links[1].text.strip()
-                        if news_link.startswith('/'):
-                            news_link = f"https://www.interfax.ru{news_link}"
-                    else:
-                        news_link = None
-                        news_title = None
-
-                    print(f"Дата: {news_time}")
-                    print(f"Заголовок: {news_title}")
-                    print(f"Ссылка: {news_link}")
-                    record = self.get_article_text(page, news_link) if page and news_link else None
-                    print(f"Статья - {record}")
-                    print('-' * 40)
-                    
-                    
-                    # Проверка на уникальность по ссылке
-                    if news_link in self.seen_links:
-                        print("Повторение статьи")
-                        print()
-                        continue  # уже добавляли такую новость
-
-                    # Создаем объект новости
-                    news_item = NewsItem(
-                    time=news_time,
-                    title=news_title,
-                    link=news_link,
-                    source="interfax.ru",
-                    description=None,  # если есть краткое описание, иначе None
-                    emitent=self.company,        # если компания — эмитент
-                    body=record             # полный текст статьи, если парсите
-                    )
-                    self.news_list.append(news_item)
-                    self.seen_links.add(news_link)  # добавляем ссылку в множество
-                    
-                except Exception as e:
-                    print(f"Ошибка при обработке новости: {str(e)}")
-                    continue
-        except:
-            pass
-        return self.news_list
-
-    def get_article_text(self, page, url):
-        page.goto(url)
-        page.wait_for_load_state('networkidle')
-        html = page.content()
-        soup = BeautifulSoup(html, 'html.parser')
-        paragraphs = soup.find_all('p')
-        article_text = '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
-        return article_text
-    
     def print_news(self):
-        """Выводит новости в консоль"""
-        print("\nНайденные новости:")
-        print("-" * 80)
-        
-        for news in self.news_list:
-            print(f"Компания: {news.emitent}")
-            print(f"Время: {news.time}")
-            print(f"Заголовок: {news.title}")
-            print(f"Ссылка: {news.link}")
-            
-            print("-" * 80)
+        logging.info("\nНайденные новости:")
+        for news in self.news_set:
+            logging.info(f"{news.time} | {news.emitent} | {news.title} | {news.link}")
 
-def main():
-    timedelta_dt = 24
-    search_within = config.search_within # True поиск идет по поискавику интерфакса
-    emitents = config.emitent
-    link_types = config.search_sections
-    
-    with sync_playwright() as p:
-        # Запуск браузера в видимом режиме
-        browser = p.chromium.launch(headless=False)
-        
-        # Создание нового контекста
-        context = browser.new_context(
-            viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        )
-        
-        # Создание новой страницы
-        page = context.new_page()
-        
-        try:
-            # Создаем парсер
-            parser = NewsParser()
-            
-            # Для каждой компании выполняем поиск
-            for company in emitents:
-                print(f"\nПоиск новостей о компании: {emitents}")
-                
-                # Открываем страницу поиска
-                page.goto("https://www.interfax.ru/search/")
-                time.sleep(1)
-                
-                # Находим форму поиска и вводим название компании
-                search_form = page.locator('.sPageForm')
-                search_input = page.locator('input[name="phrase"]')
-                # Используем более специфичный селектор для поля ввода в основной форме поиска
-                search_input = page.locator('main input[name="phrase"]')
-                
-                search_input.fill(company)
-                # Установить дату "20.06.2024" в поле с id="from"
-                offset = date.today() - timedelta(hours=timedelta_dt)
-                date_str = offset.strftime('%d.%m.%Y')
-                #date_str = "28.06.2025"
-                page.fill('input#from', date_str)
-                
-                # Отправляем форму
-                search_form.evaluate('form => form.submit()')
-                time.sleep(2)  # Ждем загрузки результатов
-                
-                # Получаем HTML контент
-                html_content = page.content()
-                
-                # Парсим результаты
-                parser.parse_news(html_content, company, page=page)
-                
-                # Небольшая задержка между запросами
-                time.sleep(1)
-            
-            # Выводим все найденные новости
-            parser.print_news()
-            return parser.news_list
-            
-            # Ждем, пока пользователь закроет браузер
-            input("\nНажмите Enter для закрытия браузера...")
-            
-        finally:
-            browser.close()
+    def run(self, config_data):
+        """Главная логика запуска парсера"""
+        logging.basicConfig(level=logging.INFO)
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=False)
+            context = browser.new_context(
+                viewport={'width': 1920, 'height': 1080},
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
+            )
+            page = context.new_page()
+
+            try:
+                for company in config_data.emitent:
+                    logging.info(f"\nПоиск новостей о компании: {company}")
+                    page.goto(self.params.search_page)
+                    time.sleep(1)
+
+                    page.fill(self.params.search_input, company)
+
+                    try:
+                        offset = date.today() - timedelta(hours=config_data.time_delta_hours)
+                        page.fill('input#from', offset.strftime('%d.%m.%Y'))
+                    except Exception as e:
+                        logging.warning(f"Не удалось задать дату: {e}")
+                    try:
+                        if self.params.search_form:
+                            page.locator(self.params.search_form).evaluate("form => form.submit()")
+                        else:
+                            page.press(self.params.search_input, "Enter")
+                    except:
+                        logging.info("Ошибка при нажатии на поиск")
+
+                    page.wait_for_load_state("networkidle")
+                    time.sleep(1)
+
+                    html = page.content()
+                    print("html ",len(html))
+                    self.parse_news(html, company, page)
+                    time.sleep(1)
+
+                self.print_news()
+                save_news_to_txt(self.news_set)
+                return self.news_set
+
+            finally:
+                browser.close()
+
+
 
 if __name__ == '__main__':
-    news = main()
+    from ..config import commersant_params,interfax_params
+
+    parser = NewsParser(commersant_params)
+    news = parser.run(config)
     save_news_to_txt(news)
