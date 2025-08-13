@@ -5,7 +5,8 @@ from ..config_schema import NewsItem
 import requests
 from bs4 import BeautifulSoup
 import re
-
+from playwright.sync_api import sync_playwright
+from tenacity import retry, stop_after_attempt
 
 def save_news_to_txt(news_list, txt_filename="all_news.txt",):
     with open(txt_filename, "a", encoding="utf-8") as f:
@@ -17,12 +18,21 @@ def save_news_to_txt(news_list, txt_filename="all_news.txt",):
             if item.body:
                 f.write(item.body.strip() + "\n")
             f.write("\n---\n\n")  # Добавляем ссылку в список сохранённых
-
+@retry(stop=stop_after_attempt(3))
 def fetch_article_body(url: str, source:str) -> str | None:
     try:
+        
+        
         response = requests.get(url, timeout=10)
         response.raise_for_status()
+        print()
+        print()
+        print()
+        
         soup = BeautifulSoup(response.text, 'html.parser')
+        print(soup)
+        print()
+        print(f"soup len - {len(soup)}")
         # Универсально: собрать все <p> (можно доработать под конкретные сайты)
         if source== "РИА Новости":
             paragraphs = soup.find_all('div', class_='article__text')
@@ -86,7 +96,9 @@ def parse_rss(feed_url: str, source: str, emitents: list, search_within: bool = 
             continue
         try:
             link = entry.get('link', '')
+            print(link)
             body = fetch_article_body(link,source=source) if link else None
+            print(body)
             title = entry.get('title', 'Без заголовка')
             add_news = False
             if search_within:
