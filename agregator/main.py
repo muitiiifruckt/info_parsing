@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from .connectors.ria import get_ria_news
 from .connectors.russia_magazine import get_russia_magazine_news
 from .connectors.rbk import get_rbk_news
@@ -10,6 +10,9 @@ from .connectors.Vedomosti import get_filtered_items as get_vedomosti_news
 from .connectors.interfacs_e import main as interfacs_main
 from .config import ag_conf_1 as config
 from .config import commersant_params,interfax_params
+from threading import Thread
+from agregator.connectors.news_viewer.server import run_server
+from agregator.connectors.news_viewer.newspaper_html_creator import create_html
 SEEN_FILE = "seen_news.txt"
 
 def load_seen():
@@ -130,13 +133,28 @@ def fetch_daily_news():
         pass  # Просто очищаем файл
 
 if __name__ == "__main__":
-    scheduler = BlockingScheduler(timezone="Europe/Moscow")
-    # Каждые 15 минут
-    scheduler.add_job(fetch_rss_news, 'interval', minutes=3, id='rss_news')
-    # Каждый день в 23:59
+    # запускаем Flask-сервер в отдельном потоке
+    server_thread = Thread(target=run_server, daemon=True)
+    server_thread.start()
+    
+    # Даем серверу время на запуск
+    import time
+    time.sleep(2)
+    
+    # запускаем планировщик
+    scheduler = BackgroundScheduler(timezone="Europe/Moscow")
+    scheduler.add_job(fetch_rss_news, 'interval', minutes=15, id='rss_news')
     scheduler.add_job(fetch_daily_news, 'cron', hour=23, minute=59, id='daily_news')
-    print("Сбор новостей запущен. Для остановки нажмите Ctrl+C.")
+    scheduler.add_job(create_html, 'cron', hour=23, minute=59, id='html_creator')
+    
+    scheduler.start()
+    
+    print("Сбор новостей запущен. Сервер работает в фоне. Для остановки нажмите Ctrl+C.")
+    
     try:
-        scheduler.start()
+        # Бесконечный цикл вместо блокирующего scheduler
+        while True:
+            time.sleep(1)
     except (KeyboardInterrupt, SystemExit):
         print("Остановка парсера.")
+        scheduler.shutdown()
