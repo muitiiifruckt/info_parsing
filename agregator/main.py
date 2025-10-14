@@ -143,9 +143,9 @@ if __name__ == "__main__":
     
     # запускаем планировщик
     scheduler = BackgroundScheduler(timezone="Europe/Moscow")
-    scheduler.add_job(fetch_rss_news, 'interval', minutes=15, id='rss_news')
-    scheduler.add_job(fetch_daily_news, 'cron', hour=23, minute=59, id='daily_news')
-    scheduler.add_job(create_html, 'cron', hour=23, minute=59, id='html_creator')
+    scheduler.add_job(fetch_rss_news, 'interval', minutes=10, id='rss_news')
+    scheduler.add_job(fetch_daily_news, 'interval', minutes=11, id='daily_news')
+    scheduler.add_job(create_html, 'interval', minutes=12, id='html_creator')
     
     scheduler.start()
     

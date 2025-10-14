@@ -21,9 +21,20 @@ def save_news_to_txt(news_list, txt_filename="all_news.txt",):
 @retry(stop=stop_after_attempt(3))
 def fetch_article_body(url: str, source:str) -> str | None:
     try:
-        
-        
-        response = requests.get(url, timeout=10)
+        headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                    "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Accept-Encoding": "gzip, deflate, br",
+                    "Connection": "keep-alive",
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache",
+                    "Referer": "https://www.google.com/",
+                    "Upgrade-Insecure-Requests": "1",
+                }
+
+                        
+        response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         print()
         print()
@@ -42,9 +53,32 @@ def fetch_article_body(url: str, source:str) -> str | None:
             paragraphs = soup.find_all('p')
             text += '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
         elif source == "ТАСС":
-            text = soup.find('div', class_="NewsHeader_lead__XcM1k NewsHeader_lead--with_media___zjHd").get_text() + ". "
-            paragraphs = soup.find_all('article')
-            text += '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
+            # 1) Лид берём из метатегов (устойчиво к смене классов)
+            lead = None
+            og = soup.find("meta", attrs={"property": "og:description"})
+            if og and og.get("content"):
+                lead = og["content"].strip()
+            else:
+                md = soup.find("meta", attrs={"name": "description"})
+                if md and md.get("content"):
+                    lead = md["content"].strip()
+
+            # 2) Основной текст — абзацы внутри <article>, если есть
+            paragraphs = []
+            article_tag = soup.find("article")
+            if article_tag:
+                paragraphs = article_tag.find_all("p")
+            else:
+                # запасной вариант: любые <p>, но без пустых
+                paragraphs = soup.find_all("p")
+
+            body_text = '\n'.join(
+                p.get_text(" ", strip=True)
+                for p in paragraphs
+                if p and p.get_text(strip=True)
+            )
+
+            text = ((lead + ". ") if lead else "") + body_text
         else:
             paragraphs = soup.find_all('p')
             text = '\n'.join(p.get_text() for p in paragraphs if p.get_text(strip=True))
