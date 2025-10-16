@@ -14,6 +14,7 @@ def save_news_to_txt(news_list, txt_filename="all_news.txt",):
             f.write(f"Название: {item.title}\n")
             f.write(f"Источник: {item.source}\n")
             f.write(f"Ссылка: {item.link}\n")
+            f.write(f"Эмитент: {item.emitent}\n")
             f.write("Статья:\n")
             if item.body:
                 f.write(item.body.strip() + "\n")

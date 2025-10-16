@@ -29,6 +29,7 @@ def create_html():
     for block in blocks:
         title_match = re.search(r"^Название:\s*(.+)", block, re.MULTILINE)
         source_match = re.search(r"^Источник:\s*(.+)", block, re.MULTILINE)
+        emitent_match = re.search(r"^Эмитент:\s*(.+)", block, re.MULTILINE)  # Добавить
         link_match = re.search(r"^Ссылка:\s*(.+)", block, re.MULTILINE)
         article_match = re.search(r"^Статья:\s*(.+)", block, re.DOTALL | re.MULTILINE)
 
@@ -36,17 +37,30 @@ def create_html():
             news_list.append({
                 "title": title_match.group(1).strip(),
                 "source": source_match.group(1).strip(),
+                "emitent": emitent_match.group(1).strip() if emitent_match else "Не указан",  # Добавить
                 "link": link_match.group(1).strip(),
                 "article": article_match.group(1).strip()
             })
 
-    # --- 4. формируем HTML ---
+    # --- 4. формируем HTML с фильтрами ---
+    # Получаем уникальные источники и эмитенты
+    sources = list(set(news['source'] for news in news_list))
+    emitents = list(set(news['emitent'] for news in news_list))
+    
     html_header = """<!doctype html>
     <html lang="ru">
     <head>
     <meta charset="utf-8">
     <style>
     body { font-family: system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:#f2f2f2; padding:30px 0; }
+    .filters { width:80%; max-width:1200px; margin:0 auto 20px; background:#fff; padding:20px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+    .filter-section { margin-bottom:15px; }
+    .filter-section h3 { margin:0 0 10px; color:#333; font-size:1rem; }
+    .filter-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+    .filter-btn { padding:6px 12px; border:1px solid #ddd; background:#f8f9fa; border-radius:4px; cursor:pointer; font-size:0.9rem; transition:all 0.2s; }
+    .filter-btn.active { background:#0078d7; color:#fff; border-color:#0078d7; }
+    .filter-btn:hover { background:#e9ecef; }
+    .filter-btn.active:hover { background:#005a9e; }
     .news { width:80%; max-width:1200px; margin:0 auto; counter-reset: news-counter; }
     details { background:#fff; margin:18px 0; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.1); padding:20px 24px; counter-increment: news-counter; }
     summary::before { content: counter(news-counter) ". "; font-weight:700; color:#0078d7; }
@@ -57,6 +71,8 @@ def create_html():
     .actions { margin-top:12px; display:flex; gap:8px; }
     .ok { padding:8px 10px; border:0; border-radius:6px; cursor:pointer; font-size:0.9rem; transition: background-color .15s ease; background:#9ca3af; color:#fff; }
     .ok.active { background:#16a34a; color:#fff; }
+    .news-item { display:none; }
+    .news-item.visible { display:block; }
     @media (max-width:600px){ .news {width:95%} }
     </style>
     <script>
@@ -95,29 +111,114 @@ def create_html():
     }
     }
 
+    // Функции для фильтрации
+    let activeFilters = {
+        sources: new Set(),
+        emitents: new Set()
+    };
+
+    function toggleFilter(type, value, button) {
+        if (activeFilters[type].has(value)) {
+            activeFilters[type].delete(value);
+            button.classList.remove('active');
+        } else {
+            activeFilters[type].add(value);
+            button.classList.add('active');
+        }
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const newsItems = document.querySelectorAll('.news-item');
+        
+        newsItems.forEach(item => {
+            const source = item.getAttribute('data-source');
+            const emitent = item.getAttribute('data-emitent');
+            
+            let show = true;
+            
+            // Если есть активные фильтры источников
+            if (activeFilters.sources.size > 0 && !activeFilters.sources.has(source)) {
+                show = false;
+            }
+            
+            // Если есть активные фильтры эмитентов
+            if (activeFilters.emitents.size > 0 && !activeFilters.emitents.has(emitent)) {
+                show = false;
+            }
+            
+            if (show) {
+                item.classList.add('visible');
+            } else {
+                item.classList.remove('visible');
+            }
+        });
+        
+        // Обновляем счетчик видимых новостей
+        const visibleCount = document.querySelectorAll('.news-item.visible').length;
+        document.getElementById('news-count').textContent = visibleCount;
+    }
+
     document.addEventListener('DOMContentLoaded', applyInitialState);
     </script>
     </head>
     <body>
+    <div class="filters">
+        <div class="filter-section">
+            <h3>Источники:</h3>
+            <div class="filter-buttons">
+    """
+
+    # Добавляем кнопки фильтров для источников
+    for source in sources:
+        safe_source = html.escape(source)
+        html_header += f'<button class="filter-btn" onclick="toggleFilter(\'sources\', \'{safe_source}\', this)">{safe_source}</button>\n'
+    
+    html_header += """
+            </div>
+        </div>
+        <div class="filter-section">
+            <h3>Эмитенты:</h3>
+            <div class="filter-buttons">
+    """
+    
+    # Добавляем кнопки фильтров для эмитентов
+    for emitent in emitents:
+        safe_emitent = html.escape(emitent)
+        html_header += f'<button class="filter-btn" onclick="toggleFilter(\'emitents\', \'{safe_emitent}\', this)">{safe_emitent}</button>\n'
+    
+    html_header += f"""
+            </div>
+        </div>
+        <div style="margin-top:10px; font-size:0.9rem; color:#666;">
+            Показано: <span id="news-count">{len(news_list)}</span> из {len(news_list)} новостей
+        </div>
+    </div>
     <div class="news">
     """
 
     html_footer = "</div></body></html>"
     
-    # --- 5. формируем блоки новостей ---
+    # --- 5. формируем блоки новостей с атрибутами для фильтрации ---
     html_news = ""
     for news in news_list:
         article_html = news['article'].replace('\n', '<br>')
         safe_title = html.escape(news['title'])
         safe_link = html.escape(news['link'])
+        safe_source = html.escape(news['source'])
+        safe_emitent = html.escape(news['emitent'])
+        
         html_news += f"""
-        <details>
+        <details class="news-item visible" data-source="{safe_source}" data-emitent="{safe_emitent}">
         <summary><span class="sum-title">{safe_title}</span>
             <button class="ok" data-link="{safe_link}" data-title="{safe_title}" onclick="toggleRelevant(event,this,'{safe_link}','{safe_title}')">Релевантно</button>
         </summary>
         <div class="article">
             <p>{article_html}</p>
             <a href="{safe_link}" target="_blank">{news['source']}</a>
+            <div style="margin-top:8px; font-size:0.85rem; color:#666;">
+                Эмитент: {news['emitent']}
+            </div>
         </div>
         </details>
     """

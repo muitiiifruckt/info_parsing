@@ -13,19 +13,6 @@ from .config import commersant_params,interfax_params
 from threading import Thread
 from agregator.connectors.news_viewer.server import run_server
 from agregator.connectors.news_viewer.newspaper_html_creator import create_html
-SEEN_FILE = "seen_news.txt"
-
-def load_seen():
-    if not os.path.exists(SEEN_FILE):
-        return set()
-    with open(SEEN_FILE, "r", encoding="utf-8") as f:
-        return set(line.strip() for line in f if line.strip())
-
-def save_seen(seen):
-    with open(SEEN_FILE, "w", encoding="utf-8") as f:
-        for link in seen:
-            f.write(link + "\n")
-
 
 
 def save_news_to_txt(news_list, txt_filename="all_news.txt"):
@@ -35,6 +22,7 @@ def save_news_to_txt(news_list, txt_filename="all_news.txt"):
             f.write(f"Название: {item.title}\n")
             f.write(f"Источник: {item.source}\n")
             f.write(f"Ссылка: {item.link}\n")
+            f.write(f"Эмитент: {item.emitent}\n")
             f.write("Статья:\n")
             if item.body:
                 f.write(item.body.strip() + "\n")
@@ -85,8 +73,6 @@ def fetch_rss_news():
     save_news_to_txt(news)
 
 def fetch_daily_news():
-    emitents = config.emitent
-    search_within = config.search_within
     news = []
     # Коммерсант
     try:
