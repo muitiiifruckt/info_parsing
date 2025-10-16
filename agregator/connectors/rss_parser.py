@@ -41,9 +41,10 @@ def fetch_article_body(url: str, source:str) -> str | None:
         print()
         
         soup = BeautifulSoup(response.text, 'html.parser')
-        print(soup)
-        print()
-        print(f"soup len - {len(soup)}")
+        if soup and len(soup) > 40:
+            print("Разметка успешно получена")
+        else:
+            print("Разметка не получена")
         # Универсально: собрать все <p> (можно доработать под конкретные сайты)
         if source== "РИА Новости":
             paragraphs = soup.find_all('div', class_='article__text')

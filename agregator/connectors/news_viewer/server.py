@@ -1,15 +1,22 @@
-from flask import Flask, send_file, abort, render_template_string
-import os, glob
+from flask import Flask, send_file, abort, render_template_string, request, jsonify
+import os, glob, json
 
 app = Flask(__name__)
 
 # 🔹 Папка с HTML-новостями относительно этого скрипта
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 NEWS_DIR = os.path.join(BASE_DIR, "html_papers")  # html_papers рядом со server.py
-
+LABELS_FILE = os.path.join(NEWS_DIR, "labels.jsonl")
 # создаём папку, если её нет
 os.makedirs(NEWS_DIR, exist_ok=True)
 print("Папка новостей:", NEWS_DIR)
+
+@app.post("/label")
+def save_label():
+    data = request.get_json(silent=True) or {}
+    with open(LABELS_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(data, ensure_ascii=False) + "\n")
+    return jsonify(ok=True)
 
 @app.route("/news")
 def news_index():

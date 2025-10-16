@@ -2,7 +2,7 @@ import re
 from agregator.config_schema import NewsItem
 import os
 from datetime import date
-
+import html
 NEWS_PATH = r"all_news.txt"
 NEWS_HTML_DIR = r"agregator\connectors\news_viewer\html_papers"
 def create_html():
@@ -50,32 +50,76 @@ def create_html():
     .news { width:80%; max-width:1200px; margin:0 auto; counter-reset: news-counter; }
     details { background:#fff; margin:18px 0; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.1); padding:20px 24px; counter-increment: news-counter; }
     summary::before { content: counter(news-counter) ". "; font-weight:700; color:#0078d7; }
-    summary { cursor:pointer; font-size:1.2rem; font-weight:600; color:#0078d7; outline:none; }
+    summary { cursor:pointer; font-size:1.2rem; font-weight:600; color:#0078d7; outline:none; display:flex; align-items:center; justify-content:space-between; gap:12px; }
     summary::-webkit-details-marker { display:none; }
     .article { margin-top:16px; font-size:1rem; line-height:1.6; color:#333; }
     .article a { display:inline-block; margin-top:10px; padding:8px 14px; background:#0078d7; color:#fff; text-decoration:none; border-radius:6px; font-size:0.9rem; }
+    .actions { margin-top:12px; display:flex; gap:8px; }
+    .ok { padding:8px 10px; border:0; border-radius:6px; cursor:pointer; font-size:0.9rem; transition: background-color .15s ease; background:#9ca3af; color:#fff; }
+    .ok.active { background:#16a34a; color:#fff; }
     @media (max-width:600px){ .news {width:95%} }
     </style>
+    <script>
+    function keyFor(link){ return "relabeled::" + link; }
+
+    function applyInitialState(){
+    document.querySelectorAll('button.ok[data-link]').forEach(btn => {
+        const link = btn.getAttribute('data-link');
+        if (localStorage.getItem(keyFor(link)) === '1') {
+        btn.classList.add('active');
+        }
+    });
+    }
+
+        async function sendLabel(link, title, label) {
+    try {
+        await fetch('/label', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ link, title, label, ts: new Date().toISOString() })
+        });
+    } catch(e) { console.error(e); }
+    }
+
+    function toggleRelevant(ev, btn, link, title){
+    ev.stopPropagation();
+    ev.preventDefault();
+    if (btn.classList.contains('active')) {
+        btn.classList.remove('active');
+        localStorage.removeItem(keyFor(link));
+        sendLabel(link, title, 'irrelevant');
+    } else {
+        btn.classList.add('active');
+        localStorage.setItem(keyFor(link), '1');
+        sendLabel(link, title, 'relevant');
+    }
+    }
+
+    document.addEventListener('DOMContentLoaded', applyInitialState);
+    </script>
     </head>
     <body>
     <div class="news">
     """
 
     html_footer = "</div></body></html>"
-
+    
     # --- 5. формируем блоки новостей ---
     html_news = ""
     for news in news_list:
-        # заменяем переносы строк на <br>, чтобы не было проблем с f-string
         article_html = news['article'].replace('\n', '<br>')
+        safe_title = html.escape(news['title'])
+        safe_link = html.escape(news['link'])
         html_news += f"""
-    <details>
-    <summary>{news['title']}</summary>
-    <div class="article">
-    <p>{article_html}</p>
-    <a href="{news['link']}" target="_blank">{news['source']}</a>
-    </div>
-    </details>
+        <details>
+        <summary><span class="sum-title">{safe_title}</span>
+            <button class="ok" data-link="{safe_link}" data-title="{safe_title}" onclick="toggleRelevant(event,this,'{safe_link}','{safe_title}')">Релевантно</button>
+        </summary>
+        <div class="article">
+            <p>{article_html}</p>
+            <a href="{safe_link}" target="_blank">{news['source']}</a>
+        </div>
+        </details>
     """
 
     # формируем имя файла с текущей датой

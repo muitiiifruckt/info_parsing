@@ -26,23 +26,12 @@ def save_seen(seen):
         for link in seen:
             f.write(link + "\n")
 
-def load_saved_links(filename="saved_links.txt"):
-    try:
-        with open(filename, "r", encoding="utf-8") as f:
-            return set(line.strip() for line in f if line.strip())
-    except FileNotFoundError:
-        return set()
 
-def save_link(link, filename="saved_links.txt"):
-    with open(filename, "a", encoding="utf-8") as f:
-        f.write(link + "\n")
 
-def save_news_to_txt(news_list, txt_filename="all_news.txt", links_filename="saved_links.txt"):
-    saved_links = load_saved_links(links_filename)
+def save_news_to_txt(news_list, txt_filename="all_news.txt"):
+    print(f"Saving {len(news_list)} news to {txt_filename}")
     with open(txt_filename, "a", encoding="utf-8") as f:
         for item in news_list:
-            if item.link in saved_links:
-                continue  # Пропускаем уже сохранённые
             f.write(f"Название: {item.title}\n")
             f.write(f"Источник: {item.source}\n")
             f.write(f"Ссылка: {item.link}\n")
@@ -50,7 +39,7 @@ def save_news_to_txt(news_list, txt_filename="all_news.txt", links_filename="sav
             if item.body:
                 f.write(item.body.strip() + "\n")
             f.write("\n---\n\n")
-            save_link(item.link, links_filename)  # Добавляем ссылку в список сохранённых
+    print(f"Saved {len(news_list)} news to {txt_filename}")
 
 def fetch_rss_news():
     emitents = config.emitent
@@ -143,9 +132,9 @@ if __name__ == "__main__":
     
     # запускаем планировщик
     scheduler = BackgroundScheduler(timezone="Europe/Moscow")
-    scheduler.add_job(fetch_rss_news, 'interval', minutes=10, id='rss_news')
+    scheduler.add_job(fetch_rss_news, 'interval', minutes=5, id='rss_news')
     scheduler.add_job(fetch_daily_news, 'interval', minutes=11, id='daily_news')
-    scheduler.add_job(create_html, 'interval', minutes=12, id='html_creator')
+    scheduler.add_job(create_html, 'interval', minutes=5, id='html_creator')
     
     scheduler.start()
     
