@@ -88,11 +88,15 @@ def create_html():
     }
 
         async function sendLabel(link, title, label) {
+    // Извлекаем текст статьи из элемента с классом "article"
+    const articleElement = document.querySelector(`[data-link="${link}"]`).closest('details').querySelector('.article');
+    const articleText = articleElement ? articleElement.textContent.trim() : '';
+    
     try {
         await fetch('/label', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ link, title, label, ts: new Date().toISOString() })
+        body: JSON.stringify({ link, title, label, text: articleText, ts: new Date().toISOString() })
         });
     } catch(e) { console.error(e); }
     }

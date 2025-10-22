@@ -14,8 +14,42 @@ print("Папка новостей:", NEWS_DIR)
 @app.post("/label")
 def save_label():
     data = request.get_json(silent=True) or {}
-    with open(LABELS_FILE, "a", encoding="utf-8") as f:
-        f.write(json.dumps(data, ensure_ascii=False) + "\n")
+    link = data.get('link')
+    
+    if not link:
+        return jsonify(ok=False, error="No link provided")
+    
+    # Читаем существующие записи
+    existing_records = []
+    if os.path.exists(LABELS_FILE):
+        with open(LABELS_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        record = json.loads(line.strip())
+                        existing_records.append(record)
+                    except json.JSONDecodeError:
+                        continue
+    
+    # Проверяем, есть ли уже запись с такой ссылкой
+    existing_index = None
+    for i, record in enumerate(existing_records):
+        if record.get('link') == link:
+            existing_index = i
+            break
+    
+    if existing_index is not None:
+        # Удаляем существующую запись
+        del existing_records[existing_index]
+    else:
+        # Добавляем новую запись
+        existing_records.append(data)
+    
+    # Перезаписываем файл
+    with open(LABELS_FILE, "w", encoding="utf-8") as f:
+        for record in existing_records:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    
     return jsonify(ok=True)
 
 @app.route("/news")
